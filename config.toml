@@ -1,0 +1,5 @@
+ [contacts]
+ names = ["DevA", "DevB"]
+
+ [services]
+ names = ["ServiceA", "ServiceB", "ServiceC"]
