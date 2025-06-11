@@ -86,7 +86,7 @@ st.markdown(
 )
 
 # Clear form button
-if st.button("Clear Form"):
+if st.button("Clear Form", type="primary"):
     for key in list(st.session_state.keys()):
         del st.session_state[key]
 
@@ -167,7 +167,7 @@ st.code(json_str, language="json")
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("Export to base64"):
+    if st.button("Export to base64", type="secondary"):
         b64 = base64.b64encode(json_str.encode()).decode()
         st.text_area("Base64 Encoded JSON", b64, height=200, key="export_b64")
 
