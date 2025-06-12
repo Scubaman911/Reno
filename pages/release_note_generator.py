@@ -65,6 +65,7 @@ if "pending_load" in st.session_state:
         st.session_state[f"{svc}_config_only"] = details.get("config_only", False)
         st.session_state[f"{svc}_risk_level"] = details.get("risk_level", "Low")
         st.session_state[f"{svc}_pr_links"] = "\n".join(details.get("pr_links", []))
+        st.session_state[f"{svc}_change_description"] = details.get("change_description", "")
         st.session_state[f"{svc}_design_links"] = "\n".join(details.get("design_links", []))
         st.session_state[f"{svc}_code_quality_links"] = "\n".join(details.get("code_quality_links", []))
         st.session_state[f"{svc}_additional_links"] = "\n".join(details.get("additional_links", []))
@@ -139,7 +140,25 @@ if selected_services:
 
             config_only = st.checkbox("Config only", key=f"{svc}_config_only")
             risk_level = st.selectbox(
-                "Risk level", ["Low", "Medium", "High"], key=f"{svc}_risk_level"
+                "Risk level",
+                ["Low", "Medium", "High"],
+                key=f"{svc}_risk_level",
+                help=(
+                    "Low – simple change, config only or small function tweaks.\n"
+                    "Medium – more significant changes to larger application components.\n"
+                    "High – major changes across multiple components or non-backwards compatible modifications."
+                ),
+            )
+
+            # Show explanatory caption inline for quick reference.
+            risk_info_map = {
+                "Low": "Simple change, config only or small function tweaks.",
+                "Medium": "More significant changes to larger application components.",
+                "High": "Major changes across multiple components or non-backwards-compatible modifications.",
+            }
+            st.caption(f"{risk_level}: {risk_info_map.get(risk_level, '')}")
+            change_description = st.text_area(
+                "Change description", key=f"{svc}_change_description"
             )
             pr_links = st.text_area("PR links (one per line)", key=f"{svc}_pr_links")
             design_links = st.text_area("Design links (one per line)", key=f"{svc}_design_links")
@@ -153,6 +172,7 @@ if selected_services:
             form_data["services"][svc] = {
                 "config_only": config_only,
                 "risk_level": risk_level,
+                "change_description": change_description,
                 "pr_links": _parse_links(pr_links),
                 "design_links": _parse_links(design_links),
                 "code_quality_links": _parse_links(code_quality_links),
