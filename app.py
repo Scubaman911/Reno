@@ -1,184 +1,72 @@
-# Reno – Release Note Templating Tool (single-page version)
+"""
+Reno – Landing Page
+
+This is the main entry point for the multi-page Streamlit application.
+It simply acts as a landing page that lets the user pick between the
+different tools bundled with Reno.  For now we expose two tools:
+
+1. Release Note Generator – the original form that was previously in
+   `app.py` (now moved to `pages/release_note_generator.py`).
+2. Release Consolidator – placeholder page for upcoming functionality.
+"""
 
 import streamlit as st
 
-# Page configuration MUST be set before any other Streamlit calls.
-st.set_page_config(page_title="Release Note Form", page_icon="📝", layout="wide")
-
-import toml
-import json
-import base64
-from datetime import date
-
-
-# Utility to trigger a rerun regardless of Streamlit version.
-
-
-def _safe_rerun():
-    """Trigger a script rerun using whichever API is available."""
-    if hasattr(st, "rerun"):
-        st.rerun()
-    else:
-        st.experimental_rerun()
-
 
 # ---------------------------------------------------------------------------
-# Load configuration
+# Page configuration
 # ---------------------------------------------------------------------------
 
 
-@st.cache_data
-def load_config():
-    return toml.load("config.toml")
-
-
-config = load_config()
+st.set_page_config(
+    page_title="Reno – Home",
+    page_icon="🎛️",
+)
 
 # ---------------------------------------------------------------------------
-# Handle deferred base64 load (populate session_state before widgets build)
+# Landing page content
 # ---------------------------------------------------------------------------
 
 
-if "pending_load" in st.session_state:
-    loaded = st.session_state.pop("pending_load")
-
-    # Basic fields
-    if "release_date" in loaded:
-        try:
-            st.session_state["release_date"] = date.fromisoformat(loaded["release_date"])
-        except Exception:
-            pass
-    if "contact" in loaded:
-        st.session_state["contact"] = loaded["contact"]
-
-    # Services selections and per-service data
-    services_loaded = loaded.get("services", {})
-    st.session_state["selected_services"] = list(services_loaded.keys())
-
-    for svc, details in services_loaded.items():
-        st.session_state[f"{svc}_config_only"] = details.get("config_only", False)
-        st.session_state[f"{svc}_risk_level"] = details.get("risk_level", "Low")
-        st.session_state[f"{svc}_pr_links"] = "\n".join(details.get("pr_links", []))
-        st.session_state[f"{svc}_design_links"] = "\n".join(details.get("design_links", []))
-        st.session_state[f"{svc}_code_quality_links"] = "\n".join(details.get("code_quality_links", []))
-        st.session_state[f"{svc}_additional_links"] = "\n".join(details.get("additional_links", []))
+st.title("Reno")
+st.subheader("Pick a tool to get started.")
 
 
-# ---------------------------------------------------------------------------
-# Page layout & styling
-# ---------------------------------------------------------------------------
+def _switch_page(page_name: str):
+    """Attempt to switch pages programmatically.
 
-
-
-st.title("Reno – Release Note Templating Tool")
-
-# Custom CSS tweaks (bold tab titles, grey card background)
-st.markdown(
+    This uses `st.switch_page` when available (Streamlit >= 1.20).
+    When not available we display a short help message so that users
+    can still navigate via the sidebar.
     """
-    <style>
-    div[data-testid="stTabs"] button {font-weight:700 !important;}
-    div[data-testid="stTabs"] div[data-testid="stVerticalBlock"] {
-        background-color:#fafafa; padding:1rem; border-radius:4px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
-# Clear form button
-if st.button("Clear Form", type="primary"):
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
+    if hasattr(st, "switch_page"):
+        try:
+            st.switch_page(page_name)
+        except Exception as e:  # pragma: no cover – defensive only
+            st.error(f"Unable to open page: {e}")
+    else:
+        st.info("Use the navigation menu on the left to open the selected page.")
 
-# ---------------------------------------------------------------------------
-# Basic inputs
-# ---------------------------------------------------------------------------
-
-
-if "release_date" not in st.session_state:
-    st.session_state["release_date"] = date.today()
-
-release_date = st.date_input(
-    "Release note date", value=st.session_state["release_date"], key="release_date"
-)
-
-contact = st.selectbox(
-    "Point of contact", config.get("contacts", {}).get("names", []), key="contact"
-)
-
-services = config.get("services", {}).get("names", [])
-
-selected_services = st.multiselect("Select services", services, key="selected_services")
-
-# Add spacing before tabs
-st.markdown("<div style='margin-top:1.25rem'></div>", unsafe_allow_html=True)
-
-# ---------------------------------------------------------------------------
-# Build per-service UI & assemble JSON
-# ---------------------------------------------------------------------------
-
-
-form_data = {"release_date": release_date.isoformat(), "contact": contact, "services": {}}
-
-
-def _parse_links(text: str):
-    return [l.strip() for l in text.splitlines() if l.strip()]
-
-
-if selected_services:
-    tabs = st.tabs(selected_services)
-
-    for tab, svc in zip(tabs, selected_services):
-        with tab:
-            st.subheader(svc)
-
-            config_only = st.checkbox("Config only", key=f"{svc}_config_only")
-            risk_level = st.selectbox(
-                "Risk level", ["Low", "Medium", "High"], key=f"{svc}_risk_level"
-            )
-            pr_links = st.text_area("PR links (one per line)", key=f"{svc}_pr_links")
-            design_links = st.text_area("Design links (one per line)", key=f"{svc}_design_links")
-            code_quality_links = st.text_area(
-                "Code quality links (one per line)", key=f"{svc}_code_quality_links"
-            )
-            additional_links = st.text_area(
-                "Additional links (one per line)", key=f"{svc}_additional_links"
-            )
-
-            form_data["services"][svc] = {
-                "config_only": config_only,
-                "risk_level": risk_level,
-                "pr_links": _parse_links(pr_links),
-                "design_links": _parse_links(design_links),
-                "code_quality_links": _parse_links(code_quality_links),
-                "additional_links": _parse_links(additional_links),
-            }
-
-
-# ---------------------------------------------------------------------------
-# Show JSON & base64 export/import
-# ---------------------------------------------------------------------------
-
-
-st.write("### Form Data JSON")
-json_str = json.dumps(form_data, indent=2)
-st.code(json_str, language="json")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("Export to base64", type="secondary"):
-        b64 = base64.b64encode(json_str.encode()).decode()
-        st.text_area("Base64 Encoded JSON", b64, height=200, key="export_b64")
+    if st.button("📝 Release Note Generator", use_container_width=True):
+        # File names are used for navigation, but Streamlit also accepts the
+        # human-readable page title. We go with the title to remain stable if
+        # the file gets renamed.
+        _switch_page("pages/release_note_generator.py")
 
 with col2:
-    input_b64 = st.text_area("Paste Base64", key="input_b64", height=200)
-    if st.button("Load from base64"):
-        try:
-            decoded = base64.b64decode(input_b64).decode()
-            data = json.loads(decoded)
+    if st.button("📄 Release Consolidator", use_container_width=True):
+        _switch_page("pages/release_consolidator.py")
 
-            st.session_state["pending_load"] = data
-            _safe_rerun()
-        except Exception as e:
-            st.error(f"Error loading data: {e}")
+
+st.markdown(
+    """
+---
+
+ℹ️  You can always access the same pages from the navigation menu on the left.
+"""
+)
