@@ -64,6 +64,9 @@ if "pending_load" in st.session_state:
     for svc, details in services_loaded.items():
         st.session_state[f"{svc}_config_only"] = details.get("config_only", False)
         st.session_state[f"{svc}_risk_level"] = details.get("risk_level", "Low")
+        st.session_state[f"{svc}_benefit_level"] = details.get("benefit_level", "Low")
+        st.session_state[f"{svc}_version"] = details.get("version", "")
+        st.session_state[f"{svc}_known_issues"] = details.get("known_issues", "")
         st.session_state[f"{svc}_pr_links"] = "\n".join(details.get("pr_links", []))
         st.session_state[f"{svc}_change_description"] = details.get("change_description", "")
         st.session_state[f"{svc}_design_links"] = "\n".join(details.get("design_links", []))
@@ -139,6 +142,13 @@ if selected_services:
             st.subheader(svc)
 
             config_only = st.checkbox("Config only", key=f"{svc}_config_only")
+
+            # Move change description above risk level
+            change_description = st.text_area(
+                "Change description", key=f"{svc}_change_description"
+            )
+
+            # Risk level selection
             risk_level = st.selectbox(
                 "Risk level",
                 ["Low", "Medium", "High"],
@@ -150,15 +160,31 @@ if selected_services:
                 ),
             )
 
-            # Show explanatory caption inline for quick reference.
+            # Explanatory caption for selected risk level.
             risk_info_map = {
                 "Low": "Simple change, config only or small function tweaks.",
                 "Medium": "More significant changes to larger application components.",
                 "High": "Major changes across multiple components or non-backwards-compatible modifications.",
             }
             st.caption(f"{risk_level}: {risk_info_map.get(risk_level, '')}")
-            change_description = st.text_area(
-                "Change description", key=f"{svc}_change_description"
+
+            # Benefit delivered by change (shown below risk description)
+            benefit_level = st.selectbox(
+                "Benefit delivered by change",
+                ["Low", "Medium", "High"],
+                key=f"{svc}_benefit_level",
+                help=(
+                    "Low – Minor improvements or maintenance.\n"
+                    "Medium – Noticeable value or efficiency gains.\n"
+                    "High – Significant new features or major customer impact."
+                ),
+            )
+
+            # Additional per-service fields
+            version = st.text_input("Version", key=f"{svc}_version")
+
+            known_issues = st.text_area(
+                "Known issues, risks and mitigations", key=f"{svc}_known_issues"
             )
             pr_links = st.text_area("PR links (one per line)", key=f"{svc}_pr_links")
             design_links = st.text_area("Design links (one per line)", key=f"{svc}_design_links")
@@ -172,6 +198,9 @@ if selected_services:
             form_data["services"][svc] = {
                 "config_only": config_only,
                 "risk_level": risk_level,
+                "benefit_level": benefit_level,
+                "version": version,
+                "known_issues": known_issues,
                 "change_description": change_description,
                 "pr_links": _parse_links(pr_links),
                 "design_links": _parse_links(design_links),
