@@ -244,21 +244,14 @@ else:
                 _safe_rerun()
 
         with col_content:
-            st.markdown(
-                f"""
-                <div class="reno-card">
-                    <h4>Release note – {date}</h4>
-                    <div class="reno-meta"><b>Contact:</b> {contact} &nbsp;|&nbsp; <b>Services:</b> {services}</div>
-                    {services_detail_html}
-                """,
-                unsafe_allow_html=True,
-            )
+            # Build a compact summary label for the collapsible card.
+            summary_label = f"Release note – {date}  |  Contact: {contact}  |  Services: {services}"
 
-            # Show the JSON inside an expander
-            with st.expander("Show full JSON"):
-                st.json(data, expanded=False)
+            with st.expander(summary_label, expanded=False):
+                # Full details only visible when expanded
+                st.markdown(services_detail_html, unsafe_allow_html=True)
 
-            # Close div opened in markdown above
+            # Close card wrapper
             st.markdown("</div>", unsafe_allow_html=True)
 
 
