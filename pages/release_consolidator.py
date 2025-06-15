@@ -161,23 +161,77 @@ else:
         # Build per-service details (version & change description)
         # ------------------------------------------------------------------
 
+        # Build an HTML snippet that lists **all** recorded information per service
         services_detail_html = ""
 
         if service_names:
             from html import escape
 
+            field_order = [
+                "version",
+                "config_only",
+                "risk_level",
+                "benefit_level",
+                "change_description",
+                "known_issues",
+                "pr_links",
+                "design_links",
+                "code_quality_links",
+                "additional_links",
+            ]
+
+            field_labels = {
+                "version": "Version",
+                "config_only": "Config only",
+                "risk_level": "Risk level",
+                "benefit_level": "Benefit delivered",
+                "change_description": "Change description",
+                "known_issues": "Known issues / mitigations",
+                "pr_links": "PR links",
+                "design_links": "Design links",
+                "code_quality_links": "Code quality links",
+                "additional_links": "Additional links",
+            }
+
             services_detail_html += "<div style=\"margin-top:0.5rem\">"
+
             for svc in service_names:
                 details = data.get("services", {}).get(svc, {}) or {}
 
-                version = escape(str(details.get("version", "-")))
-                change_desc_raw = details.get("change_description", "") or ""
-                change_desc = escape(change_desc_raw).replace("\n", "<br/>")
+                services_detail_html += f"<h5 style=\"margin:0.25rem 0;\">{escape(svc)}</h5>"
 
-                services_detail_html += (
-                    f"<p style=\"margin:0 0 0.5rem 0;\"><b>{escape(svc)}</b> – {version}<br/>"
-                    f"{change_desc}</p>"
-                )
+                services_detail_html += "<ul style=\"margin:0 0 0.75rem 1rem; padding-left:0.5rem; font-size:0.9rem;\">"
+
+                for field in field_order:
+                    if field not in details:
+                        continue
+
+                    value = details.get(field)
+
+                    # Normalise / format the value for display
+                    if field == "config_only":
+                        value_disp = "Yes" if value else "No"
+                    elif isinstance(value, list):
+                        if not value:
+                            continue  # skip empty list
+                        # Convert list to clickable links when they look like URLs
+                        formatted_items = []
+                        for item in value:
+                            item = str(item).strip()
+                            esc_item = escape(item)
+                            if item.startswith("http://") or item.startswith("https://"):
+                                formatted_items.append(f"<a href=\"{esc_item}\" target=\"_blank\">{esc_item}</a>")
+                            else:
+                                formatted_items.append(esc_item)
+                        value_disp = "<br/>".join(formatted_items)
+                    else:
+                        # String / other scalar – escape & preserve line breaks
+                        value_disp = escape(str(value)).replace("\n", "<br/>")
+
+                    label = field_labels.get(field, field.title())
+                    services_detail_html += f"<li><strong>{label}:</strong> {value_disp}</li>"
+
+                services_detail_html += "</ul>"
 
             services_detail_html += "</div>"
 
