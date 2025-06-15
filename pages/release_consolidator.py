@@ -152,7 +152,34 @@ else:
         # Build basic summary information
         date = data.get("release_date", "N/A")
         contact = data.get("contact", "-")
-        services = ", ".join(list(data.get("services", {}).keys())) or "-"
+
+        # Prepare service list as comma-separated value for the metadata row
+        service_names = list(data.get("services", {}).keys())
+        services = ", ".join(service_names) or "-"
+
+        # ------------------------------------------------------------------
+        # Build per-service details (version & change description)
+        # ------------------------------------------------------------------
+
+        services_detail_html = ""
+
+        if service_names:
+            from html import escape
+
+            services_detail_html += "<div style=\"margin-top:0.5rem\">"
+            for svc in service_names:
+                details = data.get("services", {}).get(svc, {}) or {}
+
+                version = escape(str(details.get("version", "-")))
+                change_desc_raw = details.get("change_description", "") or ""
+                change_desc = escape(change_desc_raw).replace("\n", "<br/>")
+
+                services_detail_html += (
+                    f"<p style=\"margin:0 0 0.5rem 0;\"><b>{escape(svc)}</b> – {version}<br/>"
+                    f"{change_desc}</p>"
+                )
+
+            services_detail_html += "</div>"
 
         # Render card contents
         col_remove, col_content = st.columns([0.1, 0.9])
@@ -168,6 +195,7 @@ else:
                 <div class="reno-card">
                     <h4>Release note – {date}</h4>
                     <div class="reno-meta"><b>Contact:</b> {contact} &nbsp;|&nbsp; <b>Services:</b> {services}</div>
+                    {services_detail_html}
                 """,
                 unsafe_allow_html=True,
             )
