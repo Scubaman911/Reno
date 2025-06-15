@@ -116,6 +116,17 @@ with st.sidebar:
         type="primary",
         on_click=_on_add_click,
     )
+    # Clear all notes and reset input
+    def _on_clear_click():
+        st.session_state["release_notes"] = []
+        st.session_state["input_b64_sidebar"] = ""
+        _safe_rerun()
+    st.button(
+        "Clear Form",
+        key="clear_form",
+        type="secondary",
+        on_click=_on_clear_click,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -129,16 +140,40 @@ if not st.session_state["release_notes"]:
         "Release Note Generator).  They will appear here as individual cards."
     )
 else:
-    # Custom CSS for simple "Google material" style cards.
+    # ------------------------------------------------------------------
+    # Inject card styling – ensure long content wraps inside the card
+    # ------------------------------------------------------------------
+
     st.markdown(
         """
         <style>
+        /* Base card styling */
         .reno-card {
-            border:1px solid #e0e0e0; border-radius:8px; padding:1rem; margin-bottom:1rem;
-            background:#ffffff; box-shadow:0 1px 3px rgba(0,0,0,0.08);
+            border:1px solid #e0e0e0;
+            border-radius:8px;
+            padding:1rem;
+            margin-bottom:1rem;
+            background:#ffffff;
+            box-shadow:0 1px 3px rgba(0,0,0,0.08);
         }
-        .reno-card h4 {margin-top:0; margin-bottom:0.25rem;}
-        .reno-meta {color:#555; font-size:0.9rem; margin-bottom:0.75rem;}
+
+        /* Ensure that *any* text (also inside links / list items) wraps within the card */
+        .reno-card, .reno-card * {
+            white-space: normal !important;
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+        }
+
+        .reno-card h4 {
+            margin-top:0;
+            margin-bottom:0.25rem;
+        }
+
+        .reno-meta {
+            color:#555;
+            font-size:0.9rem;
+            margin-bottom:0.75rem;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -146,6 +181,9 @@ else:
 
     # We copy the list because we might mutate the session state while iterating.
     for note in list(st.session_state["release_notes"]):
+        # Wrap each note in a styled card container – use custom CSS class so we can
+        # control layout easily (e.g. wrapping of long content).
+        st.markdown("<div class='reno-card'>", unsafe_allow_html=True)
         data = note["data"]
         note_id = note["id"]
 
