@@ -108,7 +108,6 @@ with st.sidebar:
 
         # Clear input for next add and rerun to refresh UI
         st.session_state["input_b64_sidebar"] = ""
-        _safe_rerun()
 
     st.button(
         "Add to Consolidator",
@@ -144,153 +143,24 @@ else:
     # Inject card styling – ensure long content wraps inside the card
     # ------------------------------------------------------------------
 
-    st.markdown(
-        """
-        <style>
-        /* Base card styling */
-        .reno-card {
-            border:1px solid #e0e0e0;
-            border-radius:8px;
-            padding:1rem;
-            margin-bottom:1rem;
-            background:#ffffff;
-            box-shadow:0 1px 3px rgba(0,0,0,0.08);
-        }
-
-        /* Ensure that *any* text (also inside links / list items) wraps within the card */
-        .reno-card, .reno-card * {
-            white-space: normal !important;
-            overflow-wrap: anywhere !important;
-            word-break: break-word !important;
-        }
-
-        .reno-card h4 {
-            margin-top:0;
-            margin-bottom:0.25rem;
-        }
-
-        .reno-meta {
-            color:#555;
-            font-size:0.9rem;
-            margin-bottom:0.75rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
     # We copy the list because we might mutate the session state while iterating.
     for note in list(st.session_state["release_notes"]):
         # Wrap each note in a styled card container – use custom CSS class so we can
         # control layout easily (e.g. wrapping of long content).
-        st.markdown("<div class='reno-card'>", unsafe_allow_html=True)
         data = note["data"]
-        note_id = note["id"]
+        st.json(note)
+        
+        with st.container(border=True):
+            st.subheader(f"Release Note: {data['release_date']}", divider="gray")
 
-        # Build basic summary information
-        date = data.get("release_date", "N/A")
-        contact = data.get("contact", "-")
+            service_names = list(data.get("services", {}).keys())
+            services = " | ".join(service_names) or "-"
+            st.text(f"Services in release:  {services}")
+            st.text(f"Point of contact:  {data['contact']}")
 
-        # Prepare service list as comma-separated value for the metadata row
-        service_names = list(data.get("services", {}).keys())
-        services = ", ".join(service_names) or "-"
+            with st.expander("View Details..."):
+                st.text("Words")
 
-        # ------------------------------------------------------------------
-        # Build per-service details (version & change description)
-        # ------------------------------------------------------------------
-
-        # Build an HTML snippet that lists **all** recorded information per service
-        services_detail_html = ""
-
-        if service_names:
-            from html import escape
-
-            field_order = [
-                "version",
-                "config_only",
-                "risk_level",
-                "benefit_level",
-                "change_description",
-                "known_issues",
-                "pr_links",
-                "design_links",
-                "code_quality_links",
-                "additional_links",
-            ]
-
-            field_labels = {
-                "version": "Version",
-                "config_only": "Config only",
-                "risk_level": "Risk level",
-                "benefit_level": "Benefit delivered",
-                "change_description": "Change description",
-                "known_issues": "Known issues / mitigations",
-                "pr_links": "PR links",
-                "design_links": "Design links",
-                "code_quality_links": "Code quality links",
-                "additional_links": "Additional links",
-            }
-
-            services_detail_html += "<div style=\"margin-top:0.5rem\">"
-
-            for svc in service_names:
-                details = data.get("services", {}).get(svc, {}) or {}
-
-                services_detail_html += f"<h5 style=\"margin:0.25rem 0;\">{escape(svc)}</h5>"
-
-                services_detail_html += "<ul style=\"margin:0 0 0.75rem 1rem; padding-left:0.5rem; font-size:0.9rem;\">"
-
-                for field in field_order:
-                    if field not in details:
-                        continue
-
-                    value = details.get(field)
-
-                    # Normalise / format the value for display
-                    if field == "config_only":
-                        value_disp = "Yes" if value else "No"
-                    elif isinstance(value, list):
-                        if not value:
-                            continue  # skip empty list
-                        # Convert list to clickable links when they look like URLs
-                        formatted_items = []
-                        for item in value:
-                            item = str(item).strip()
-                            esc_item = escape(item)
-                            if item.startswith("http://") or item.startswith("https://"):
-                                formatted_items.append(f"<a href=\"{esc_item}\" target=\"_blank\">{esc_item}</a>")
-                            else:
-                                formatted_items.append(esc_item)
-                        value_disp = "<br/>".join(formatted_items)
-                    else:
-                        # String / other scalar – escape & preserve line breaks
-                        value_disp = escape(str(value)).replace("\n", "<br/>")
-
-                    label = field_labels.get(field, field.title())
-                    services_detail_html += f"<li><strong>{label}:</strong> {value_disp}</li>"
-
-                services_detail_html += "</ul>"
-
-            services_detail_html += "</div>"
-
-        # Render card contents
-        col_remove, col_content = st.columns([0.1, 0.9])
-
-        with col_remove:
-            if st.button("✖", key=f"remove_{note_id}", help="Delete this release note"):
-                st.session_state["release_notes"] = [n for n in st.session_state["release_notes"] if n["id"] != note_id]
-                _safe_rerun()
-
-        with col_content:
-            # Build a compact summary label for the collapsible card.
-            summary_label = f"Release note – {date}  |  Contact: {contact}  |  Services: {services}"
-
-            with st.expander(summary_label, expanded=False):
-                # Full details only visible when expanded
-                st.markdown(services_detail_html, unsafe_allow_html=True)
-
-            # Close card wrapper
-            st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
