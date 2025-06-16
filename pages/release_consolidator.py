@@ -158,9 +158,13 @@ else:
             st.text(f"Services in release:  {services}")
             st.text(f"Point of contact:  {data['contact']}")
 
-            with st.expander("View Details..."):
-                st.text("Words")
+            with st.expander("Release Details..."):
+                tabs = st.tabs(service_names)
+                for tab in tabs:
+                    with tab:
+                        st.text("words")
 
+                
 
 
 # ---------------------------------------------------------------------------
